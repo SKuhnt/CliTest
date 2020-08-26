@@ -34,6 +34,7 @@ jobs:
             git commit -m "objects changed." || true
             git push
   TestCode:
+    #bug: no tests -> error
     executor: my-executor
     steps:
       - sfdx/install
@@ -93,7 +94,7 @@ jobs:
           name: Auth UAT Sandbox
           command: . ~/ci_app/ciScripts/authUat.sh
       - run:
-          name: Test Production Deployment
+          name: Test UAT Deployment
           command: |
             sfdx force:source:convert -d deploy_prod -r force-app
             sfdx force:mdapi:deploy -u uat -d deploy_prod/ --wait -1 --testlevel RunLocalTests --checkonly
@@ -106,7 +107,7 @@ jobs:
           name: Auth UAT Sandbox
           command: . ~/ci_app/ciScripts/authUat.sh
       - run:
-          name: Test Production Deployment
+          name: Test UAT Deployment
           command: |
             sfdx force:source:convert -d deploy_prod -r force-app
             sfdx force:mdapi:deploy -u uat -d deploy_prod/ --wait -1 --testlevel RunLocalTests
@@ -119,7 +120,7 @@ jobs:
           name: Auth Shared Sandbox
           command: . ~/ci_app/ciScripts/authShared.sh
       - run:
-          name: Test Production Deployment
+          name: Test Shared Deployment
           command: |
             sfdx force:source:convert -d deploy_prod -r force-app
             sfdx force:mdapi:deploy -u shared -d deploy_prod/ --wait -1 --testlevel RunLocalTests --checkonly
@@ -132,7 +133,7 @@ jobs:
           name: Auth Shared Sandbox
           command: . ~/ci_app/ciScripts/authShared.sh
       - run:
-          name: Test Production Deployment
+          name: Test Shared Deployment
           command: |
             sfdx force:source:convert -d deploy_prod -r force-app
             sfdx force:mdapi:deploy -u shared -d deploy_prod/ --wait -1 --testlevel RunLocalTests
