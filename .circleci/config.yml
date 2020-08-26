@@ -159,10 +159,11 @@ workflows:
               ignore:
                 - hotfix
                 - prod
+                - master
       - DeployToShared:
           name: Deployment to Shared
           requires:
-            - Test Deployment to Shared
+            - TestCode
           filters:
             branches:
               only:
