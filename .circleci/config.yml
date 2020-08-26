@@ -1,6 +1,6 @@
 version: 2.1
 executors:
-  my-executor:
+  myExecutor:
     docker:
       - image: cimg/node:14.5
     working_directory: ~/ci_app
@@ -8,38 +8,43 @@ executors:
 orbs:
   sfdx: circleci/salesforce-sfdx@2.1
 jobs:
-  Testing:
-    executor: my-executor
-    steps:
-      - sfdx/install
-      - checkout
-      - run:
-          name: testing
-          command: |
-            git config --global user.email "you@example.com"
-            git config --global user.name "Your Name"
-            git checkout master
-            git fetch origin
-            git reset --hard origin/master
-            ls
-            . ~/ci_app/scripts/auth-dev-hub.sh
-            sfdx force:source:retrieve -u devHub -x package.xml
-            ls
-            git add force-app/main/default/objects
-            git commit -m "objects changed." || true
-            git push
-  TestCode:
-    executor: my-executor
+  SharedChanges:
+    executor: myExecutor
     steps:
       - sfdx/install
       - checkout
       - run:
           name: Auth DevHub (=Prod)
-          command: . ~/ci_app/scripts/auth-dev-hub.sh
+          command: . ~/ci_app/ciScripts/authDevHub.sh
+      - run:
+          name: Prepare Git
+          command: |
+            git config --global user.email "activation@aquilliance.de"
+            git config --global user.name "Automated Field update pull"
+            git checkout master
+            git fetch origin
+            git reset --hard origin/master
+      - run:
+          name: Get changed Fields
+          command: sfdx force:source:retrieve -u devHub -x customField.xml
+      - run:
+          name: Push to git if changes occured
+          command: |
+            git add force-app/main/default/objects
+            git commit -m "objects changed." || true
+            git push
+  TestCode:
+    executor: myExecutor
+    steps:
+      - sfdx/install
+      - checkout
+      - run:
+          name: Auth DevHub (=Prod)
+          command: . ~/ci_app/ciScripts/authDevHub.sh
       - run:
           name: Create Scratch Org & Push data
           command: |
-            . ~/ci_app/scripts/create-scratch-org.sh
+            . ~/ci_app/ciScripts/scratchCreate.sh
             sfdx force:source:push -u circle_build_$CIRCLE_BUILD_NUM
       - run:
           name: run Tests
@@ -50,56 +55,142 @@ jobs:
           path: ~/junit
       - run:
           name: delete Scratch Org
-          command: . ~/ci_app/scripts/delete-scratch-org.sh
+          command: . ~/ci_app/ciScripts/scratchDelete.sh
       - store_artifacts:
           path: ~/junit
   TestDeployProd:
-    executor: my-executor
+    executor: myExecutor
     steps:
       - sfdx/install
       - checkout
       - run:
-          name: Auth DevHub (=Prod)
-          command: . ~/ci_app/scripts/auth-dev-hub.sh
+          name: Auth Prod
+          command: . ~/ci_app/ciScripts/authProd.sh
       - run:
           name: Test Production Deployment
           command: |
             sfdx force:source:convert -d deploy_prod -r force-app
-            sfdx force:mdapi:deploy -u devHub -d deploy_prod/ --wait -1 --testlevel RunLocalTests --checkonly
+            sfdx force:mdapi:deploy -u prod -d deploy_prod/ --wait -1 --testlevel RunLocalTests --checkonly
   DeployToProd:
-    executor: my-executor
+    executor: myExecutor
     steps:
       - sfdx/install
       - checkout
       - run:
-          name: Auth DevHub (=Prod)
-          command: . ~/ci_app/scripts/auth-dev-hub.sh
+          name: Auth Prod
+          command: . ~/ci_app/ciScripts/authProd.sh
       - run:
-          name: Test Production Deployment
+          name: Production Deployment
           command: |
             sfdx force:source:convert -d deploy_prod -r force-app
-            sfdx force:mdapi:deploy -u devHub -d deploy_prod/ --wait -1 --testlevel RunLocalTests
-  DeployToSandbox:
-    executor: my-executor
+            sfdx force:mdapi:deploy -u prod -d deploy_prod/ --wait -1 --testlevel RunLocalTests
+  TestDeployToUat:
+    executor: myExecutor
     steps:
       - sfdx/install
       - checkout
       - run:
-          name: Auth Sandbox
-          command: |
-            echo $SANDBOX_AUTH_URL > auth.txt
-            sfdx force:auth:sfdxurl:store --sfdxurlfile auth.txt --setalias sandbox
+          name: Auth UAT Sandbox
+          command: . ~/ci_app/ciScripts/authUat.sh
       - run:
           name: Test Production Deployment
           command: |
             sfdx force:source:convert -d deploy_prod -r force-app
-            sfdx force:mdapi:deploy -u sandbox -d deploy_prod/ --wait -1 --testlevel RunLocalTests
+            sfdx force:mdapi:deploy -u uat -d deploy_prod/ --wait -1 --testlevel RunLocalTests --checkonly
+  DeployToUat:
+    executor: myExecutor
+    steps:
+      - sfdx/install
+      - checkout
+      - run:
+          name: Auth UAT Sandbox
+          command: . ~/ci_app/ciScripts/authUat.sh
+      - run:
+          name: Test Production Deployment
+          command: |
+            sfdx force:source:convert -d deploy_prod -r force-app
+            sfdx force:mdapi:deploy -u uat -d deploy_prod/ --wait -1 --testlevel RunLocalTests
+  TestDeployToShared:
+    executor: myExecutor
+    steps:
+      - sfdx/install
+      - checkout
+      - run:
+          name: Auth Shared Sandbox
+          command: . ~/ci_app/ciScripts/authShared.sh
+      - run:
+          name: Test Production Deployment
+          command: |
+            sfdx force:source:convert -d deploy_prod -r force-app
+            sfdx force:mdapi:deploy -u shared -d deploy_prod/ --wait -1 --testlevel RunLocalTests --checkonly
+  DeployToShared:
+    executor: myExecutor
+    steps:
+      - sfdx/install
+      - checkout
+      - run:
+          name: Auth Shared Sandbox
+          command: . ~/ci_app/ciScripts/authShared.sh
+      - run:
+          name: Test Production Deployment
+          command: |
+            sfdx force:source:convert -d deploy_prod -r force-app
+            sfdx force:mdapi:deploy -u shared -d deploy_prod/ --wait -1 --testlevel RunLocalTests
 
 
 workflows:
   basic-test:
     jobs:
-      - Testing
+      - TestCode
+      - SharedChanges:
+          name: Check for Changes in the shared Sandbox
+          filters:
+            brances:
+              ignore:
+                - hotfix
+                - prod
+      - TestDeployToShared:
+          name: Test Deployment to Shared
+          requires:
+            - TestCode
+          filters:
+            branches:
+              ignore:
+                - hotfix
+                - prod
+      - DeployToShared:
+          name: Deployment to Shared
+          requires:
+            - Test Deployment to Shared
+          filters:
+            branches:
+              only:
+                - master
+      - DeployToUat:
+          name: Deployment to UAT
+          requires:
+            - Confirm Deployment to UAT
+          filters:
+            branches:
+              only:
+                - master
+      - RequestDeployToProd:
+          name: Confirm Deployment to Production
+          type: approval
+          filters:
+            branches:
+              only:
+                - prod
+      - DeployToProd:
+          name: Deployment to Production
+          requires:
+            - Confirm Deployment to Production
+          filters:
+            branches:
+              only:
+                - prod
+
+
       # - TestCode
       # - Test_Deployment?:
       #     type: approval
