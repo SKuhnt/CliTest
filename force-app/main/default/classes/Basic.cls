@@ -1,7 +1,7 @@
 public with sharing class Basic {
     
     public static Integer doIt(){
-        System.debug('hi');
+        System.debug('hix');
         return 1;
     }
 }
