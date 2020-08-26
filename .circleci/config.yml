@@ -14,7 +14,7 @@ jobs:
       - sfdx/install
       - checkout
       - run:
-          name: Auth DevHub (=Prod)
+          name: Auth DevHub
           command: . ~/ci_app/ciScripts/authDevHub.sh
       - run:
           name: Prepare Git
@@ -40,7 +40,7 @@ jobs:
       - sfdx/install
       - checkout
       - run:
-          name: Auth DevHub (=Prod)
+          name: Auth DevHub
           command: . ~/ci_app/ciScripts/authDevHub.sh
       - run:
           name: Create Scratch Org & Push data
