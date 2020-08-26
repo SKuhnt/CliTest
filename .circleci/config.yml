@@ -145,7 +145,7 @@ workflows:
       - SharedChanges:
           name: Check for Changes in the shared Sandbox
           filters:
-            brances:
+            branches:
               ignore:
                 - hotfix
                 - prod
