@@ -26,8 +26,8 @@ jobs:
             git reset --hard origin/master
       - run:
           name: Get changed Fields
-          command: sfdx force:source:pull -u shared -f
-          #sfdx force:source:retrieve -u shared -x customField.xml
+          command: sfdx force:source:retrieve -u shared -x customField.xml
+          #sfdx force:source:pull -u shared -f
       - run:
           name: Push to git if changes occured
           command: |
