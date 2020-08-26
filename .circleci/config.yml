@@ -133,7 +133,7 @@ jobs:
           name: Auth Shared Sandbox
           command: . ~/ci_app/ciScripts/authShared.sh
       - run:
-          name: Test Shared Deployment
+          name: Shared Deployment
           command: |
             sfdx force:source:convert -d deploy_prod -r force-app
             sfdx force:mdapi:deploy -u shared -d deploy_prod/ --wait -1 --testlevel RunLocalTests
@@ -168,14 +168,14 @@ workflows:
             branches:
               only:
                 - master
-      - DeployToUat:
-          name: Deployment to UAT
-          requires:
-            - Deployment to Shared
-          filters:
-            branches:
-              only:
-                - master
+      # - DeployToUat:
+      #     name: Deployment to UAT
+      #     requires:
+      #       - Deployment to Shared
+      #     filters:
+      #       branches:
+      #         only:
+      #           - master
       - TestDeployProd:
           name: Test Deployment to Prod
           requires:
