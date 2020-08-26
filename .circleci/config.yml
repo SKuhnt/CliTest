@@ -1,6 +1,6 @@
 version: 2.1
 executors:
-  myExecutor:
+  my-executor:
     docker:
       - image: cimg/node:14.5
     working_directory: ~/ci_app
@@ -9,7 +9,7 @@ orbs:
   sfdx: circleci/salesforce-sfdx@2.1
 jobs:
   SharedChanges:
-    executor: myExecutor
+    executor: my-executor
     steps:
       - sfdx/install
       - checkout
@@ -34,7 +34,7 @@ jobs:
             git commit -m "objects changed." || true
             git push
   TestCode:
-    executor: myExecutor
+    executor: my-executor
     steps:
       - sfdx/install
       - checkout
@@ -59,7 +59,7 @@ jobs:
       - store_artifacts:
           path: ~/junit
   TestDeployProd:
-    executor: myExecutor
+    executor: my-executor
     steps:
       - sfdx/install
       - checkout
@@ -72,7 +72,7 @@ jobs:
             sfdx force:source:convert -d deploy_prod -r force-app
             sfdx force:mdapi:deploy -u prod -d deploy_prod/ --wait -1 --testlevel RunLocalTests --checkonly
   DeployToProd:
-    executor: myExecutor
+    executor: my-executor
     steps:
       - sfdx/install
       - checkout
@@ -85,7 +85,7 @@ jobs:
             sfdx force:source:convert -d deploy_prod -r force-app
             sfdx force:mdapi:deploy -u prod -d deploy_prod/ --wait -1 --testlevel RunLocalTests
   TestDeployToUat:
-    executor: myExecutor
+    executor: my-executor
     steps:
       - sfdx/install
       - checkout
@@ -98,7 +98,7 @@ jobs:
             sfdx force:source:convert -d deploy_prod -r force-app
             sfdx force:mdapi:deploy -u uat -d deploy_prod/ --wait -1 --testlevel RunLocalTests --checkonly
   DeployToUat:
-    executor: myExecutor
+    executor: my-executor
     steps:
       - sfdx/install
       - checkout
@@ -111,7 +111,7 @@ jobs:
             sfdx force:source:convert -d deploy_prod -r force-app
             sfdx force:mdapi:deploy -u uat -d deploy_prod/ --wait -1 --testlevel RunLocalTests
   TestDeployToShared:
-    executor: myExecutor
+    executor: my-executor
     steps:
       - sfdx/install
       - checkout
@@ -124,7 +124,7 @@ jobs:
             sfdx force:source:convert -d deploy_prod -r force-app
             sfdx force:mdapi:deploy -u shared -d deploy_prod/ --wait -1 --testlevel RunLocalTests --checkonly
   DeployToShared:
-    executor: myExecutor
+    executor: my-executor
     steps:
       - sfdx/install
       - checkout
