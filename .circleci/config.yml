@@ -148,7 +148,7 @@ workflows:
           filters:
             branches:
               ignore:
-                - hotfix
+                - /^hotfix.*/
                 - prod
       - TestDeployToShared:
           name: Test Deployment to Shared
@@ -157,7 +157,7 @@ workflows:
           filters:
             branches:
               ignore:
-                - hotfix
+                - /^hotfix.*/
                 - prod
                 - master
       - DeployToShared:
@@ -184,6 +184,7 @@ workflows:
             branches:
               only:
                 - master
+                - /^hotfix.*/
       - RequestDeployToProd:
           name: Confirm Deployment to Production
           type: approval
