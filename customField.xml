@@ -3,6 +3,7 @@
   <types>
     <members>*</members>
     <members>Account</members>
+    <members>Contact</members>
     <name>CustomObject</name>
   </types>
   <types>
