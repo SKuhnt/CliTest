@@ -14,8 +14,8 @@ jobs:
       - sfdx/install
       - checkout
       - run:
-          name: Auth DevHub (=Prod)
-          command: . ~/ci_app/ciScripts/authDevHub.sh
+          name: Auth Shared
+          command: . ~/ci_app/ciScripts/authShared.sh
       - run:
           name: Prepare Git
           command: |
@@ -26,7 +26,7 @@ jobs:
             git reset --hard origin/master
       - run:
           name: Get changed Fields
-          command: sfdx force:source:retrieve -u devHub -x customField.xml
+          command: sfdx force:source:retrieve -u shared -x customField.xml
       - run:
           name: Push to git if changes occured
           command: |
@@ -40,7 +40,7 @@ jobs:
       - sfdx/install
       - checkout
       - run:
-          name: Auth DevHub (=Prod)
+          name: Auth DevHub
           command: . ~/ci_app/ciScripts/authDevHub.sh
       - run:
           name: Create Scratch Org & Push data
