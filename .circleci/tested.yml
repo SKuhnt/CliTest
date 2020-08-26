@@ -1,0 +1,64 @@
+version: 2.1
+executors:
+  my-executor:
+    docker:
+      - image: cimg/node:14.5
+    working_directory: ~/ci_app
+
+orbs:
+  sfdx: circleci/salesforce-sfdx@2.1
+jobs:
+  install_authenticate:
+    executor: my-executor
+    steps:
+      - sfdx/install
+      - checkout
+      - run:
+          name: Run your SFDX commands here
+          command: |
+            . ~/ci_app/scripts/auth-dev-hub.sh
+
+            . ~/ci_app/scripts/create-scratch-org.sh
+
+            mkdir -p workspace
+            echo $scratch_org_username > workspace/SCRATCH_ORG_USERNAME.txt
+
+            . ~/ci_app/scripts/scratch-sfdx-auth-url.sh
+            
+            echo $org_auth_url > workspace/SCRATCH_ORG_AUTH_URL.txt
+            cat workspace/SCRATCH_ORG_AUTH_URL.txt
+      - persist_to_workspace:
+          root: workspace
+          paths: 
+              - SCRATCH_ORG_AUTH_URL.txt
+              - SCRATCH_ORG_USERNAME.txt
+      - store_artifacts:
+          path: /workspace
+  second:
+    executor: my-executor
+    steps:
+      - sfdx/install
+      - checkout
+      - attach_workspace:
+          at: ~/ci_app/workspace
+      - run:
+          name: Run your SFDX commands here
+          command: |
+            . ~/ci_app/scripts/auth-dev-hub.sh
+            scratch_org_username="$(cat workspace/SCRATCH_ORG_USERNAME.txt)"
+            org_auth_url="$(cat workspace/SCRATCH_ORG_AUTH_URL.txt)"
+            echo $org_auth_url
+            sfdx force:auth:sfdxurl:store --sfdxurlfile workspace/SCRATCH_ORG_AUTH_URL.txt --setalias circle_build_$CIRCLE_BUILD_NUM
+            sfdx force:org:list
+            . ~/ci_app/scripts/delete-scratch-org.sh
+            sfdx force:org:list
+            ls
+
+workflows:
+  basic-test:
+    jobs:
+      - install_authenticate
+      - second:
+          requires :
+            - install_authenticate
+

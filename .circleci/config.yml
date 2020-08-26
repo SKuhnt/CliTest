@@ -1,0 +1,108 @@
+version: 2.1
+executors:
+  my-executor:
+    docker:
+      - image: cimg/node:14.5
+    working_directory: ~/ci_app
+
+orbs:
+  sfdx: circleci/salesforce-sfdx@2.1
+jobs:
+  Testing:
+    executor: my-executor
+    steps:
+      - sfdx/install
+      - checkout
+      - run:
+          name: testing
+          command: |
+            git config --global user.email "you@example.com"
+            git config --global user.name "Your Name"
+            git checkout master
+            git fetch origin
+            git reset --hard origin/master
+            ls
+            . ~/ci_app/scripts/auth-dev-hub.sh
+            sfdx force:source:retrieve -u devHub -x package.xml
+            ls
+            git add force-app/main/default/objects
+            git commit -m "objects changed." || true
+            git push
+  TestCode:
+    executor: my-executor
+    steps:
+      - sfdx/install
+      - checkout
+      - run:
+          name: Auth DevHub (=Prod)
+          command: . ~/ci_app/scripts/auth-dev-hub.sh
+      - run:
+          name: Create Scratch Org & Push data
+          command: |
+            . ~/ci_app/scripts/create-scratch-org.sh
+            sfdx force:source:push -u circle_build_$CIRCLE_BUILD_NUM
+      - run:
+          name: run Tests
+          command: |
+            mkdir -p ~/junit
+            sfdx force:apex:test:run -c -d ~/junit -r junit --wait 5 -u circle_build_$CIRCLE_BUILD_NUM
+      - store_test_results:
+          path: ~/junit
+      - run:
+          name: delete Scratch Org
+          command: . ~/ci_app/scripts/delete-scratch-org.sh
+      - store_artifacts:
+          path: ~/junit
+  TestDeployProd:
+    executor: my-executor
+    steps:
+      - sfdx/install
+      - checkout
+      - run:
+          name: Auth DevHub (=Prod)
+          command: . ~/ci_app/scripts/auth-dev-hub.sh
+      - run:
+          name: Test Production Deployment
+          command: |
+            sfdx force:source:convert -d deploy_prod -r force-app
+            sfdx force:mdapi:deploy -u devHub -d deploy_prod/ --wait -1 --testlevel RunLocalTests --checkonly
+  DeployToProd:
+    executor: my-executor
+    steps:
+      - sfdx/install
+      - checkout
+      - run:
+          name: Auth DevHub (=Prod)
+          command: . ~/ci_app/scripts/auth-dev-hub.sh
+      - run:
+          name: Test Production Deployment
+          command: |
+            sfdx force:source:convert -d deploy_prod -r force-app
+            sfdx force:mdapi:deploy -u devHub -d deploy_prod/ --wait -1 --testlevel RunLocalTests
+  DeployToSandbox:
+    executor: my-executor
+    steps:
+      - sfdx/install
+      - checkout
+      - run:
+          name: Auth Sandbox
+          command: |
+            echo $SANDBOX_AUTH_URL > auth.txt
+            sfdx force:auth:sfdxurl:store --sfdxurlfile auth.txt --setalias sandbox
+      - run:
+          name: Test Production Deployment
+          command: |
+            sfdx force:source:convert -d deploy_prod -r force-app
+            sfdx force:mdapi:deploy -u sandbox -d deploy_prod/ --wait -1 --testlevel RunLocalTests
+
+
+workflows:
+  basic-test:
+    jobs:
+      - Testing
+      # - TestCode
+      # - Test_Deployment?:
+      #     type: approval
+      # - TestDeployProd:
+      #     requires:
+      #       - Test_Deployment?
