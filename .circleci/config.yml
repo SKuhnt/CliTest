@@ -34,6 +34,7 @@ jobs:
             git commit -m "objects changed." || true
             git push
   TestCode:
+    #bug: no tests -> error
     executor: my-executor
     steps:
       - sfdx/install
