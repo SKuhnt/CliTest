@@ -168,8 +168,6 @@ workflows:
                 - master
       - DeployToUat:
           name: Deployment to UAT
-          requires:
-            - Confirm Deployment to UAT
           filters:
             branches:
               only:
